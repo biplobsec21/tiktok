@@ -15,7 +15,18 @@ app.get("/api/tiktok", async (req, res) => {
             return res.status(400).json({ error: "TikTok URL is required" });
         }
 
-        const data = await Tiktok(url, { parse: false });
+        // Add custom headers to bypass TikTok blocking Railway IPs
+        const data = await Tiktok(url, {
+            parse: false,
+            headers: {
+                "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+                "Referer": "https://www.tiktok.com/",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+            // Optional: Proxy support if Railway IPs are blocked
+            proxy: process.env.HTTP_PROXY || undefined,
+        });
 
         if (!data || data.length === 0) {
             return res.status(404).json({ error: "No data returned" });
@@ -29,13 +40,9 @@ app.get("/api/tiktok", async (req, res) => {
         const urlList = videoData.play_addr?.url_list || [];
         const photo = videoData.cover?.url_list || [];
 
-        return res.json({
-            urlList,
-            photo
-        });
-
+        return res.json({ urlList, photo });
     } catch (error) {
-        console.error("Error fetching TikTok data:", error);
+        console.error("Error fetching TikTok data:", error.message);
         return res.status(500).json({ error: "Failed to fetch TikTok data" });
     }
 });
