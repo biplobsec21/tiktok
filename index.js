@@ -6,6 +6,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// Public CORS Anywhere proxy (⚠️ rate-limited, for testing only)
+const proxyUrl = "https://cors-anywhere.herokuapp.com/";
+
 // API endpoint: /api/tiktok?url=<tiktok_url>
 app.get("/api/tiktok", async (req, res) => {
     try {
@@ -15,8 +18,10 @@ app.get("/api/tiktok", async (req, res) => {
             return res.status(400).json({ error: "TikTok URL is required" });
         }
 
-        // Add custom headers to bypass TikTok blocking Railway IPs
-        const data = await Tiktok(url, {
+        // Prepend proxy to the TikTok URL
+        const proxiedUrl = proxyUrl + url;
+
+        const data = await Tiktok(proxiedUrl, {
             parse: false,
             headers: {
                 "User-Agent":
@@ -24,8 +29,6 @@ app.get("/api/tiktok", async (req, res) => {
                 "Referer": "https://www.tiktok.com/",
                 "Accept-Language": "en-US,en;q=0.9",
             },
-            // Optional: Proxy support if Railway IPs are blocked
-            proxy: process.env.HTTP_PROXY || undefined,
         });
 
         if (!data || data.length === 0) {
