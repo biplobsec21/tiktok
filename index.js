@@ -6,10 +6,21 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Public CORS Anywhere proxy (⚠️ rate-limited, for testing only)
-const proxyUrl = "https://cors-anywhere.herokuapp.com/";
+// -------------------------------
+// Test endpoint
+// -------------------------------
+app.get("/", (req, res) => {
+    res.send({
+        message: "TikTok API is running!",
+        endpoints: [
+            { method: "GET", path: "/api/tiktok?url=<tiktok_url>", description: "Fetch TikTok video data" }
+        ]
+    });
+});
 
-// API endpoint: /api/tiktok?url=<tiktok_url>
+// -------------------------------
+// TikTok API endpoint
+// -------------------------------
 app.get("/api/tiktok", async (req, res) => {
     try {
         const { url } = req.query;
@@ -18,10 +29,8 @@ app.get("/api/tiktok", async (req, res) => {
             return res.status(400).json({ error: "TikTok URL is required" });
         }
 
-        // Prepend proxy to the TikTok URL
-        const proxiedUrl = proxyUrl + url;
-
-        const data = await Tiktok(proxiedUrl, {
+        // Directly fetch TikTok data (no public proxy)
+        const data = await Tiktok(url, {
             parse: false,
             headers: {
                 "User-Agent":
@@ -50,6 +59,9 @@ app.get("/api/tiktok", async (req, res) => {
     }
 });
 
+// -------------------------------
+// Start server
+// -------------------------------
 app.listen(PORT, () => {
     console.log(`TikTok API server running on http://localhost:${PORT}`);
 });
