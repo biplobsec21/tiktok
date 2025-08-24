@@ -7,14 +7,25 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // -------------------------------
-// Test route to check server status
+// TikTok session cookies
+// -------------------------------
+const sessionList = [
+    "__tea_session_id_1988=459a8aca-2302-46d3-927a-75a07b4e4434",
+    "__tea_session_id_1992=07ec675b-cd44-4edd-bbe1-997bdb514e30",
+    "__tea_session_id_345918=02a31ed7-33bd-406a-b434-d197512b1184",
+    "__tea_session_id_548444=c33447cd-0258-4523-8171-f0e1f8b1cced",
+    "__tea_session_id_594856=85166f8b-3243-4801-a28f-f8bafa55697c"
+];
+
+// -------------------------------
+// Root route for testing
 // -------------------------------
 app.get("/", (req, res) => {
-    res.send("TikTok API server is running!");
+    res.json({ message: "TikTok API is running" });
 });
 
 // -------------------------------
-// API endpoint: /api/tiktok?url=<tiktok_url>
+// TikTok video download API
 // -------------------------------
 app.get("/api/tiktok", async (req, res) => {
     try {
@@ -24,17 +35,14 @@ app.get("/api/tiktok", async (req, res) => {
             return res.status(400).json({ error: "TikTok URL is required" });
         }
 
-        // Direct fetch without proxy
         const data = await Tiktok(url, {
             parse: false,
+            sessionList, // Use your session cookies here
             headers: {
                 "User-Agent":
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
                 "Referer": "https://www.tiktok.com/",
                 "Accept-Language": "en-US,en;q=0.9",
-                "sec-ch-ua": '"Chromium";v="120", "Google Chrome";v="120"',
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": '"Windows"'
             },
         });
 
@@ -51,16 +59,12 @@ app.get("/api/tiktok", async (req, res) => {
         const photo = videoData.cover?.url_list || [];
 
         return res.json({ urlList, photo });
-
     } catch (error) {
         console.error("Error fetching TikTok data:", error.message);
         return res.status(500).json({ error: "Failed to fetch TikTok data" });
     }
 });
 
-// -------------------------------
-// Start server
-// -------------------------------
 app.listen(PORT, () => {
     console.log(`TikTok API server running on http://localhost:${PORT}`);
 });
