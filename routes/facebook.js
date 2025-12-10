@@ -1,10 +1,10 @@
 import express from 'express';
-import getFbVideoInfo from "fb-downloader-scrapper";
 import rateLimit from 'express-rate-limit';
+import getFbVideoInfo from '../utils/fbScraper.js'; // Import your new local file
 
 const router = express.Router();
 
-// 1. Specific Rate Limiter for Facebook (100 req / 15 min)
+// 1. Specific Rate Limiter for Facebook
 const fbLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -32,37 +32,29 @@ router.get('/', async (req, res) => {
         if (!url) return res.status(400).json({ error: 'URL parameter is required' });
         if (!isValidFacebookUrl(url)) return res.status(400).json({ error: 'Invalid Facebook video URL format' });
 
-        const videoInfo = await getFbVideoInfo(url);
+        // Optional: Load cookie from env if you have one, otherwise use the default inside the util
+        const cookie = process.env.FB_COOKIE || null;
 
-        if (!videoInfo) {
-            return res.status(404).json({ error: 'Could not extract video information' });
-        }
+        const videoInfo = await getFbVideoInfo(url, cookie);
 
-        // Clean up response
+        // Normalize response structure
         const response = {
             success: true,
             provider: 'Facebook',
-            title: videoInfo.title || null,
-            duration: videoInfo.duration || null,
-            thumbnail: videoInfo.thumb || null,
+            title: videoInfo.title || "Unknown Title",
+            duration: videoInfo.duration_ms ? (videoInfo.duration_ms / 1000).toFixed(2) : null,
+            thumbnail: videoInfo.thumbnail || null,
             downloadLinks: {
-                hd: videoInfo.hd || null,
                 sd: videoInfo.sd || null,
-                audioOnly: videoInfo.audio || null
+                hd: videoInfo.hd || null
             }
         };
-
-        // Remove null keys
-        Object.keys(response.downloadLinks).forEach(key =>
-            !response.downloadLinks[key] && delete response.downloadLinks[key]
-        );
 
         res.json(response);
 
     } catch (error) {
         console.error('[Facebook] Error:', error.message);
-        const statusCode = error.message.includes('not found') ? 404 : 500;
-        res.status(statusCode).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
@@ -79,7 +71,7 @@ router.post('/batch', async (req, res) => {
                 const videoInfo = await getFbVideoInfo(url);
                 return {
                     index, url, success: true,
-                    data: { hd: videoInfo.hd, title: videoInfo.title } // Keep it minimal for batch
+                    data: { hd: videoInfo.hd, sd: videoInfo.sd, title: videoInfo.title }
                 };
             } catch (error) {
                 return { index, url, success: false, error: error.message };
